@@ -9,7 +9,7 @@ class Star:
                  l, b, T, apparent_magnitude, spectral_class,
                  n_alf, n_del, p, vr, HD, Fl_Ba):
         self.constellation_name = constellation_name
-        self.map_number = self.str_to_int(map_number, 'map')
+        self.map_number = int(map_number)
         self.x_str = location_x
         self.y_str = location_y
 
@@ -25,13 +25,13 @@ class Star:
 
         self.three_coordinates = []
 
-        self.l = self.str_to_float(l, 'l')
-        self.b = self.str_to_float(b, 'b')
+        self.l = l
+        self.b = b
         self.T = T
-        self.apparent_magnitude = self.str_to_float(apparent_magnitude, 'magnitude')
+        self.apparent_magnitude = float(apparent_magnitude)
         self.spectral_class = spectral_class
-        self.n_alf = self.str_to_float(n_alf, 'n_alf')
-        self.n_del = self.str_to_float(n_del, 'n_del')
+        self.n_alf = float(n_alf)
+        self.n_del = float(n_del)
         self.p = p
         self.vr = vr
         self.HD = HD
@@ -68,33 +68,8 @@ class Star:
         information = 'constellation: ' + self.constellation_name + '\n'
         information += 'location: ' + self.x_str + ' ' + self.y_str + '\n'
         information += 'apparent magnitude: ' + str(self.apparent_magnitude) + '\n'
-        information += 'spectral class: ' + self.spectral_class
+        information += 'spectral class: ' + str(self.spectral_class)
         return information
-
-
-    def set_progect_location(self, radius, x_center, y_center):
-        self.x_progect = (x_center + radius *
-                                  math.cos(math.radians(self.x_sec / 3600)) *
-                                  math.cos(math.radians(self.y_sec / 3600)))
-        self.y_progect = (y_center + radius *
-                                  math.sin(math.radians(self.x_sec / 3600)) *
-                                  math.cos(math.radians(self.y_sec / 3600)))
-
-    def str_to_int(self, value, name):
-        try:
-            new_value = value
-            new_value = int(value)
-        except ValueError:
-            print(value + ' - valueError (int) ' + name)
-        return int(value)
-
-    def str_to_float(self, value, name):
-        try:
-            new_value = value
-            new_value = float(value)
-        except ValueError:
-            print(value + ' - valueError (float) ' + name)
-        return float(value)
 
 
 class Constellation:

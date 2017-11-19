@@ -19,6 +19,7 @@ COLORS = {'O': QColor(102, 253, 255),
           'K': QColor(255, 232, 79),
           'M': QColor(255, 157, 45)}
 
+
 class FormParams:
     form_x = 1300
     form_y = 1000
@@ -28,6 +29,7 @@ class FormParams:
     sky_center_x = 800
     sky_center_y = 500
 
+
 class Sky(QWidget):
     def __init__(self):
         super().__init__()
@@ -36,8 +38,10 @@ class Sky(QWidget):
     def initUI(self):
         self.setGeometry(0, 40, FormParams.form_x, FormParams.form_y)
         self.setWindowTitle('Sky')
-        self.progection = progection.Progection(FormParams, stars_data.get_constellations())
-        self.grid = progection.Progection(FormParams, grid.create_latitudes_and_longtitudes())
+        self.progection = progection.Progection(
+            FormParams, stars_data.get_constellations())
+        self.grid = progection.Progection(
+            FormParams, grid.create_latitudes_and_longtitudes())
         self.turn_on_grid = True
         self.print_inf = False
         self.star_for_inf = None
@@ -48,7 +52,8 @@ class Sky(QWidget):
 
     def create_media_player(self):
         self.player = QMediaPlayer()
-        self.player.setMedia(QMediaContent(QUrl.fromLocalFile('music/cosmic.mp3')), None)
+        self.player.setMedia(
+            QMediaContent(QUrl.fromLocalFile('music/cosmic.mp3')), None)
         self.player.setVolume(30)
         self.player.play()
 
@@ -119,14 +124,12 @@ class Sky(QWidget):
             self.grid.need_to_change_current_model = True
             self.grid.change_sky_visual_progection()
             self.repaint()
-        print(key)
 
-    def mousePressEvent(self, QMouseEvent):
-        print(str(QMouseEvent.x()) + ' ' + str(QMouseEvent.y()))
+    def print_nearest_star_information(self, mouse_x, mouse_y):
         stars = {}
         for star in self.progection.current_visual_progection:
-            distance = math.sqrt(math.pow(QMouseEvent.x() - star.x_visual_progect, 2) +
-                                 math.pow(QMouseEvent.y() - star.y_visual_progect, 2))
+            distance = math.sqrt(math.pow(mouse_x - star.x_visual_progect, 2) +
+                                 math.pow(mouse_y - star.y_visual_progect, 2))
             if distance <= 10:
                 stars[star] = distance
 
@@ -145,6 +148,9 @@ class Sky(QWidget):
         self.print_inf = True
         self.repaint()
 
+    def mousePressEvent(self, QMouseEvent):
+        self.print_nearest_star_information(QMouseEvent.x(), QMouseEvent.y())
+
     def print_information(self, qp, star):
         if star is None:
             return
@@ -154,7 +160,8 @@ class Sky(QWidget):
                              '\nz: ' + str(star.three_coordinates[2]))
         qp.setPen(QColor(200, 200, 200))
         qp.setFont(QFont('Decorative', 10))
-        qp.drawText(0, 600, FormParams.dx, FormParams.form_y, Qt.AlignLeft, star_information)
+        qp.drawText(0, 600, FormParams.dx, FormParams.form_y,
+                    Qt.AlignLeft, star_information)
 
     def change_size_max(self):
         self.progection.change_sky_progect_half_view_angle(5)
@@ -219,34 +226,6 @@ class Sky(QWidget):
         btn_unclock_rotation.move(50, 50)
         btn_unclock_rotation.show()
 
-        btn_up = QPushButton(self)
-        btn_up.resize(48, 48)
-        btn_up.setIcon(QIcon('images/up.jpg'))
-        btn_up.setIconSize(QSize(46, 46))
-        btn_up.move(100, 150)
-        btn_up.show()
-
-        btn_down = QPushButton(self)
-        btn_down.resize(48, 48)
-        btn_down.setIcon(QIcon('images/down.jpg'))
-        btn_down.setIconSize(QSize(46, 46))
-        btn_down.move(100, 250)
-        btn_down.show()
-
-        btn_right = QPushButton(self)
-        btn_right.resize(48, 48)
-        btn_right.setIcon(QIcon('images/right.jpg'))
-        btn_right.setIconSize(QSize(46, 46))
-        btn_right.move(150, 200)
-        btn_right.show()
-
-        btn_left = QPushButton(self)
-        btn_left.resize(48, 48)
-        btn_left.setIcon(QIcon('images/left.jpg'))
-        btn_left.setIconSize(QSize(46, 46))
-        btn_left.move(50, 200)
-        btn_left.show()
-
         btn_max = QPushButton(self)
         btn_max.resize(48, 48)
         btn_max.clicked.connect(self.change_size_max)
@@ -265,6 +244,7 @@ class Sky(QWidget):
 
         btn_grid = QPushButton(self)
         btn_grid.resize(48, 48)
+        btn_grid.setToolTip('on/off grid')
         btn_grid.clicked.connect(self.turn_on_off_grid)
         btn_grid.setIcon(QIcon('images/worldgrid.png'))
         btn_grid.setIconSize(QSize(47, 47))
@@ -295,10 +275,10 @@ class Sky(QWidget):
         poligon = []
         if progection.SkyProgection.head_angle <= 90:
             poligon = QPolygon([QPoint(FormParams.dx, FormParams.form_y),
-                           QPoint(FormParams.form_x, FormParams.form_y),
-                           QPoint(FormParams.form_x, -(progection.SkyProgection.radius - progection.SkyProgection.distance_to_earth)
-                                  + FormParams.sky_center_y + FormParams.sky_radius),
-                           QPoint(FormParams.dx, -(progection.SkyProgection.radius - progection.SkyProgection.distance_to_earth)
+                                QPoint(FormParams.form_x, FormParams.form_y),
+                                QPoint(FormParams.form_x,
+                                       -(progection.SkyProgection.radius - progection.SkyProgection.distance_to_earth) + FormParams.sky_center_y + FormParams.sky_radius),
+                                QPoint(FormParams.dx, -(progection.SkyProgection.radius - progection.SkyProgection.distance_to_earth)
                                   + FormParams.sky_center_y + FormParams.sky_radius)])
         else:
             poligon = QPolygon([QPoint(FormParams.dx, 0),
@@ -313,12 +293,12 @@ class Sky(QWidget):
         qp.setBrush(QColor(14, 41, 75))
         qp.drawPolygon(poligon)
 
-
     def draw_grid(self, qp):
         qp.setPen(QColor(14, 41, 75))
         if not self.turn_on_grid:
             return
-        for g in groupby(sorted(self.grid.current_visual_progection, key=lambda x: x.constellation_name),
+        for g in groupby(sorted(self.grid.current_visual_progection,
+                                key=lambda x: x.constellation_name),
                          key=lambda x: x.constellation_name):
             old_point = None
             points = list(g[1])
@@ -334,11 +314,12 @@ class Sky(QWidget):
 
     def draw_backlight(self, qp):
         for star in self.progection.current_visual_progection:
-            if self.star_for_inf is not None and \
-                            star.constellation_name == self.star_for_inf.constellation_name:
+            if (self.star_for_inf is not None and
+                    star.constellation_name == self.star_for_inf.constellation_name):
                 qp.setBrush(QColor(0, 30, 30))
                 qp.setPen(QColor(0, 30, 30))
-                qp.drawEllipse(star.x_visual_progect - 10, star.y_visual_progect - 10,
+                qp.drawEllipse(star.x_visual_progect - 10,
+                               star.y_visual_progect - 10,
                                20, 20)
 
         for star in self.progection.current_visual_progection:
@@ -347,7 +328,8 @@ class Sky(QWidget):
                             self.star_for_inf.y_str == star.y_str:
                 qp.setBrush(QColor(100, 175, 183))
                 qp.setPen(QColor(100, 175, 183))
-                qp.drawEllipse(star.x_visual_progect - 8, star.y_visual_progect - 8,
+                qp.drawEllipse(star.x_visual_progect - 8,
+                               star.y_visual_progect - 8,
                                15, 15)
 
     def draw_progection(self, qp):
@@ -367,7 +349,9 @@ class Sky(QWidget):
             for letter in star.spectral_class:
                 if letter in COLORS:
                     qp.setBrush(COLORS[letter])
-            qp.drawEllipse(star.x_visual_progect - star_size / 2, star.y_visual_progect - star_size / 2, star_size, star_size)
+            qp.drawEllipse(star.x_visual_progect - star_size / 2,
+                           star.y_visual_progect - star_size / 2,
+                           star_size, star_size)
 
     def draw_sky(self, qp):
         self.draw_layout(qp)

@@ -8,7 +8,9 @@ def create_latitudes_and_longtitudes():
         latitude = stars_data.Constellation('latitude' + str(i))
         points = []
         for x in range(0, 361, 5):
-            new_point = stars_data.Star('latitude' + str(i), 0, '00:00:00', '+00:00:00', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            new_point = stars_data.Star('latitude' + str(i), 0,
+                                        '00:00:00', '+00:00:00',
+                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             new_point.x_sec = x * 3600
             new_point.y_sec = i * 3600
             points.append(new_point)
@@ -19,7 +21,9 @@ def create_latitudes_and_longtitudes():
         longtitude = stars_data.Constellation('longtitude' + str(i))
         points = []
         for y in range(-90, 91, 5):
-            new_point = stars_data.Star('longtitude' + str(i), 0, '00:00:00', '+00:00:00', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            new_point = stars_data.Star('longtitude' + str(i), 0,
+                                        '00:00:00', '+00:00:00',
+                                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
             new_point.x_sec = i * 3600
             new_point.y_sec = y * 3600
             points.append(new_point)
@@ -28,9 +32,11 @@ def create_latitudes_and_longtitudes():
 
     return all_lines
 
+
 def create_earth_mark(center_x, center_y):
     earth_mark = stars_data.Constellation('earth_mark')
-    mark = stars_data.Star('earth mark', 0, '00:00:00', '+00:00:00', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+    mark = stars_data.Star('earth mark', 0, '00:00:00', '+00:00:00',
+                           0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
     mark.x_sec = center_x * 3600
     mark.y_sec = (center_y - 90) * 3600
     earth_mark.stars = [mark]
