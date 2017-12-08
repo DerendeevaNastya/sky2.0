@@ -1,12 +1,11 @@
 import math
 import sys
-import stars_data
-import progection
-import grid
-import copy
+from forSky import stars_data, progection, grid, my_parser, input_handler
 from itertools import groupby
-from PyQt5.QtCore import QPoint, Qt, QSize, QUrl
-from PyQt5.QtGui import QPainter, QColor, QFont, QIcon, QImage, QPolygon
+
+import time
+from PyQt5.QtCore import QPoint, Qt, QSize, QUrl, QTimer
+from PyQt5.QtGui import QPainter, QColor, QFont, QIcon, QImage
 from PyQt5.QtWidgets import QWidget, QApplication, QPushButton, QSlider
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent
 
@@ -31,31 +30,62 @@ class FormParams:
 
 
 class Sky(QWidget):
-    def __init__(self):
+    def __init__(self, namespace):
         super().__init__()
-        self.initUI()
+        self.initUI(namespace)
 
-    def initUI(self):
+    def initUI(self, namespace):
+        self.namespace = namespace
         self.setGeometry(0, 40, FormParams.form_x, FormParams.form_y)
         self.setWindowTitle('Sky')
-        self.progection = progection.Progection(
-            FormParams, stars_data.get_constellations())
-        self.grid = progection.Progection(
-            FormParams, grid.create_latitudes_and_longtitudes())
+        self.create_progection_and_grid()
         self.turn_on_grid = True
         self.print_inf = False
         self.star_for_inf = None
         self.create_bottoms()
         self.create_bright_slider()
         self.create_media_player()
+        self.create_dict_bottoms_pressed()
+        self.last_pressed_key_time = time.time()
+        self.create_widget_timer()
         self.show()
 
+    def create_widget_timer(self):
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.realise_keys_timeout)
+        self.timer.start(500)
+
     def create_media_player(self):
-        self.player = QMediaPlayer()
-        self.player.setMedia(
-            QMediaContent(QUrl.fromLocalFile('music/cosmic.mp3')), None)
-        self.player.setVolume(30)
-        self.player.play()
+        try:
+            self.player = QMediaPlayer()
+            self.player.setMedia(
+                QMediaContent(QUrl.fromLocalFile('music/cosmic.mp3')), None)
+            self.player.setVolume(30)
+            self.player.play()
+        except Exception:
+            pass
+
+    def create_progection_and_grid(self):
+        progection.SkyProgection.center_y = self.namespace.lat
+        progection.SkyProgection.center_x = \
+            input_handler.get_center_x_from_time_sec(
+                self.namespace.datetime
+            ) / 3600
+        constellations = stars_data.get_constellations()
+        constellations = input_handler.change_constellation_from_year(
+            self.namespace.datetime,
+            constellations)
+        self.progection = progection.Progection(
+            FormParams,
+            constellations)
+        progection.SkyProgection.center_x = -self.namespace.long
+        self.grid = progection.Progection(
+            FormParams, grid.create_latitudes_and_longtitudes())
+        self.progection.SkyProgection.center_x += (
+            self.namespace.long +
+            input_handler.get_center_x_from_time_sec(
+                self.namespace.datetime
+            ) / 3600)
 
     def paintEvent(self, event):
         qp = QPainter()
@@ -63,67 +93,112 @@ class Sky(QWidget):
         qp.setBrush(Qt.black)
         qp.drawRect(self.rect())
         self.draw_sky(qp)
+        self.print_information(qp)
         if self.print_inf:
-            self.print_information(qp, self.star_for_inf)
+            self.print_information_star(qp, self.star_for_inf)
         qp.end()
 
     def wheelEvent(self, QWheelEvent):
         point = QWheelEvent.angleDelta()
         self.progection.change_sky_progect_half_view_angle(point.y() / 24)
+        self.grid.change_sky_progect_half_view_angle(point.y() / 24)
         self.progection.change_sky_visual_progection()
         self.grid.change_sky_visual_progection()
         self.repaint()
 
+    def create_dict_bottoms_pressed(self):
+        self.btms_pressed = {Qt.Key_A: 0,
+                             Qt.Key_D: 0,
+                             Qt.Key_W: 0,
+                             Qt.Key_S: 0,
+                             Qt.Key_1: 0,
+                             Qt.Key_3: 0,
+                             Qt.Key_5: 0,
+                             Qt.Key_2: 0}
+
+    def realise_keys(self):
+        if self.btms_pressed[Qt.Key_A] != 0:
+            self.progection.change_sky_progect_rotation_angle(
+                -self.btms_pressed[Qt.Key_A])
+            self.grid.change_sky_progect_rotation_angle(
+                -self.btms_pressed[Qt.Key_A])
+            self.progection.change_sky_visual_progection()
+            self.grid.change_sky_visual_progection()
+
+        if self.btms_pressed[Qt.Key_D] != 0:
+            self.progection.change_sky_progect_rotation_angle(
+                self.btms_pressed[Qt.Key_D])
+            self.grid.change_sky_progect_rotation_angle(
+                self.btms_pressed[Qt.Key_D])
+            self.progection.change_sky_visual_progection()
+            self.grid.change_sky_visual_progection()
+
+        if self.btms_pressed[Qt.Key_W] != 0:
+            self.progection.change_sky_progect_head_angle(
+                -self.btms_pressed[Qt.Key_W])
+            self.grid.change_sky_progect_head_angle(
+                -self.btms_pressed[Qt.Key_W])
+            self.grid.change_sky_visual_progection()
+            self.progection.change_sky_visual_progection()
+
+        if self.btms_pressed[Qt.Key_S] != 0:
+            self.progection.change_sky_progect_head_angle(
+                self.btms_pressed[Qt.Key_S])
+            self.grid.change_sky_progect_head_angle(
+                self.btms_pressed[Qt.Key_S])
+            self.progection.change_sky_visual_progection()
+            self.grid.change_sky_visual_progection()
+
+        if self.btms_pressed[Qt.Key_3] != 0:
+            self.progection.change_sky_progect_center_x(
+                -self.btms_pressed[Qt.Key_3])
+            self.grid.change_sky_progect_center_x(
+                -self.btms_pressed[Qt.Key_3])
+            self.progection.change_sky_visual_progection()
+            self.grid.change_sky_visual_progection()
+
+        if self.btms_pressed[Qt.Key_1] != 0:
+            self.progection.change_sky_progect_center_x(
+                self.btms_pressed[Qt.Key_1])
+            self.grid.change_sky_progect_center_x(
+                self.btms_pressed[Qt.Key_1])
+            self.progection.change_sky_visual_progection()
+            self.grid.change_sky_visual_progection()
+
+        if self.btms_pressed[Qt.Key_5] != 0:
+            self.progection.change_sky_progect_center_y(
+                self.btms_pressed[Qt.Key_5])
+            self.grid.change_sky_progect_center_y(
+                self.btms_pressed[Qt.Key_5])
+            self.progection.change_sky_visual_progection()
+            self.grid.change_sky_visual_progection()
+
+        if self.btms_pressed[Qt.Key_2] != 0:
+            self.progection.change_sky_progect_center_y(
+                -self.btms_pressed[Qt.Key_2])
+            self.grid.change_sky_progect_center_y(
+                -self.btms_pressed[Qt.Key_2])
+            self.progection.change_sky_visual_progection()
+            self.grid.change_sky_visual_progection()
+
+        for key in self.btms_pressed:
+            self.btms_pressed[key] = 0
+        self.repaint()
+
     def keyPressEvent(self, event):
         key = event.key()
+        now = time.time()
+        for item in self.btms_pressed:
+            if item == key:
+                self.btms_pressed[key] += 1
+        if now - self.last_pressed_key_time > 0.5:
+            self.realise_keys()
+        self.last_pressed_key_time = now
 
-        if key == Qt.Key_A:
-            self.progection.change_sky_progect_rotation_angle(-1)
-            self.progection.change_sky_visual_progection()
-            self.grid.change_sky_visual_progection()
-            self.repaint()
-        if key == Qt.Key_D:
-            self.progection.change_sky_progect_rotation_angle(1)
-            self.progection.change_sky_visual_progection()
-            self.grid.change_sky_visual_progection()
-            self.repaint()
-        if key == Qt.Key_W:
-            self.progection.change_sky_progect_head_angle(-1)
-            self.grid.need_to_change_current_model = True
-            self.grid.change_sky_visual_progection()
-            self.progection.change_sky_visual_progection()
-            self.repaint()
-        if key == Qt.Key_S:
-            self.progection.change_sky_progect_head_angle(1)
-            self.grid.need_to_change_current_model = True
-            self.progection.change_sky_visual_progection()
-            self.grid.change_sky_visual_progection()
-            self.repaint()
-
-        if key == Qt.Key_3:
-            self.progection.change_sky_progect_center_x(1)
-            self.progection.change_sky_visual_progection()
-            self.grid.need_to_change_current_model = True
-            self.grid.change_sky_visual_progection()
-            self.repaint()
-        if key == Qt.Key_1:
-            self.progection.change_sky_progect_center_x(-1)
-            self.progection.change_sky_visual_progection()
-            self.grid.need_to_change_current_model = True
-            self.grid.change_sky_visual_progection()
-            self.repaint()
-        if key == Qt.Key_5:
-            self.progection.change_sky_progect_center_y(1)
-            self.progection.change_sky_visual_progection()
-            self.grid.need_to_change_current_model = True
-            self.grid.change_sky_visual_progection()
-            self.repaint()
-        if key == Qt.Key_2:
-            self.progection.change_sky_progect_center_y(-1)
-            self.progection.change_sky_visual_progection()
-            self.grid.need_to_change_current_model = True
-            self.grid.change_sky_visual_progection()
-            self.repaint()
+    def realise_keys_timeout(self):
+        now = time.time()
+        if now - self.last_pressed_key_time > 0.5:
+            self.realise_keys()
 
     def print_nearest_star_information(self, mouse_x, mouse_y):
         stars = {}
@@ -151,7 +226,20 @@ class Sky(QWidget):
     def mousePressEvent(self, QMouseEvent):
         self.print_nearest_star_information(QMouseEvent.x(), QMouseEvent.y())
 
-    def print_information(self, qp, star):
+    def print_information(self, qp):
+        inf = " ".join(['Your location: ',
+                        str(self.grid.SkyProgection.center_y), 'lat',
+                        str(-1 * (self.grid.SkyProgection.center_x
+                            if self.grid.SkyProgection.center_x < 180
+                            else self.grid.SkyProgection.center_x - 360)),
+                        'long', '\n'
+                        'Date: ', str(self.namespace.datetime)])
+        qp.setPen(QColor(200, 200, 200))
+        qp.setFont(QFont('Decorative', 10))
+        qp.drawText(0, 0, FormParams.dx, 150,
+                    Qt.AlignLeft, inf)
+
+    def print_information_star(self, qp, star):
         if star is None:
             return
         star_information = star.get_information()
@@ -166,28 +254,28 @@ class Sky(QWidget):
     def change_size_max(self):
         self.progection.change_sky_progect_half_view_angle(5)
         self.progection.change_sky_visual_progection()
-        self.grid.need_to_change_current_model = True
+        self.grid.change_sky_progect_half_view_angle(5)
         self.grid.change_sky_visual_progection()
         self.repaint()
 
     def change_size_min(self):
         self.progection.change_sky_progect_half_view_angle(-5)
         self.progection.change_sky_visual_progection()
-        self.grid.need_to_change_current_model = True
+        self.grid.change_sky_progect_half_view_angle(-5)
         self.grid.change_sky_visual_progection()
         self.repaint()
 
-    def change_clock_rotation(self, angle):
+    def change_clock_rotation(self):
         self.progection.change_sky_progect_rotation_angle(5)
         self.progection.change_sky_visual_progection()
-        self.grid.need_to_change_current_model = True
+        self.grid.change_sky_progect_rotation_angle(5)
         self.grid.change_sky_visual_progection()
         self.repaint()
 
-    def change_unclock_rotation(self, angle):
+    def change_unclock_rotation(self):
         self.progection.change_sky_progect_rotation_angle(-5)
         self.progection.change_sky_visual_progection()
-        self.grid.need_to_change_current_model = True
+        self.grid.change_sky_progect_rotation_angle(-5)
         self.grid.change_sky_visual_progection()
         self.repaint()
 
@@ -214,7 +302,7 @@ class Sky(QWidget):
         btn_clock_rotation.clicked.connect(self.change_clock_rotation)
         btn_clock_rotation.setIcon(QIcon('images/rotate_right1600.png'))
         btn_clock_rotation.setIconSize(QSize(47, 47))
-        btn_clock_rotation.move(100, 50)
+        btn_clock_rotation.move(100, 150)
         btn_clock_rotation.show()
 
         btn_unclock_rotation = QPushButton(self)
@@ -223,7 +311,7 @@ class Sky(QWidget):
         btn_unclock_rotation.clicked.connect(self.change_unclock_rotation)
         btn_unclock_rotation.setIcon(QIcon('images/rotate_left1600.png'))
         btn_unclock_rotation.setIconSize(QSize(46, 46))
-        btn_unclock_rotation.move(50, 50)
+        btn_unclock_rotation.move(50, 150)
         btn_unclock_rotation.show()
 
         btn_max = QPushButton(self)
@@ -231,7 +319,7 @@ class Sky(QWidget):
         btn_max.clicked.connect(self.change_size_max)
         btn_max.setIcon(QIcon('images/plus.png'))
         btn_max.setIconSize(QSize(47, 47))
-        btn_max.move(200, 50)
+        btn_max.move(200, 150)
         btn_max.show()
 
         btn_min = QPushButton(self)
@@ -239,7 +327,7 @@ class Sky(QWidget):
         btn_min.clicked.connect(self.change_size_min)
         btn_min.setIcon(QIcon('images/minus.png'))
         btn_min.setIconSize(QSize(47, 47))
-        btn_min.move(200, 100)
+        btn_min.move(200, 200)
         btn_min.show()
 
         btn_grid = QPushButton(self)
@@ -267,31 +355,12 @@ class Sky(QWidget):
                        FormParams.sky_radius * 2,
                        FormParams.sky_radius * 2)
 
+    def draw_earth(self, qp):
+        pass
+
     def draw_black_frame(self, qp):
         image = QImage('images/рамка.png')
         qp.drawImage(QPoint(FormParams.dx - 1, -2), image)
-
-    def draw_earth(self, qp):
-        poligon = []
-        if progection.SkyProgection.head_angle <= 90:
-            poligon = QPolygon([QPoint(FormParams.dx, FormParams.form_y),
-                                QPoint(FormParams.form_x, FormParams.form_y),
-                                QPoint(FormParams.form_x,
-                                       -(progection.SkyProgection.radius - progection.SkyProgection.distance_to_earth) + FormParams.sky_center_y + FormParams.sky_radius),
-                                QPoint(FormParams.dx, -(progection.SkyProgection.radius - progection.SkyProgection.distance_to_earth)
-                                  + FormParams.sky_center_y + FormParams.sky_radius)])
-        else:
-            poligon = QPolygon([QPoint(FormParams.dx, 0),
-                            QPoint(FormParams.form_x, 0),
-                            QPoint(FormParams.form_x,
-                                   (progection.SkyProgection.radius - progection.SkyProgection.distance_to_earth)
-                                   + FormParams.sky_center_y - FormParams.sky_radius),
-                            QPoint(FormParams.dx,
-                                   (progection.SkyProgection.radius - progection.SkyProgection.distance_to_earth)
-                                   + FormParams.sky_center_y - FormParams.sky_radius)])
-        qp.setPen(QColor(14, 41, 75))
-        qp.setBrush(QColor(14, 41, 75))
-        qp.drawPolygon(poligon)
 
     def draw_grid(self, qp):
         qp.setPen(QColor(14, 41, 75))
@@ -304,18 +373,45 @@ class Sky(QWidget):
             points = list(g[1])
             for point in points:
                 if old_point is not None and \
-                                math.fabs(old_point.x_sec - point.x_sec) / 3600 <= 5 and \
-                                math.fabs(old_point.y_sec - point.y_sec) / 3600 <= 5:
+                                math.fabs(
+                                            old_point.x_sec - point.x_sec
+                                ) / 3600 <= 5 and \
+                                math.fabs(
+                                            old_point.y_sec - point.y_sec
+                                ) / 3600 <= 5:
                     qp.drawLine(old_point.x_visual_progect,
                                 old_point.y_visual_progect,
                                 point.x_visual_progect,
                                 point.y_visual_progect)
                 old_point = point
+                qp.setFont(QFont('Decorative', 6))
+                is_lat = 'latitude' in old_point.constellation_name
+                if is_lat and old_point.x_sec / 3600 % 10 == 5:
+                    qp.drawText(old_point.x_visual_progect,
+                                old_point.y_visual_progect,
+                                old_point.x_visual_progect + 10,
+                                old_point.y_visual_progect,
+                                Qt.AlignLeft, str(old_point.y_sec / 3600))
+
+                right_point = (
+                    old_point.y_sec / 3600 % 10 == 5 and
+                    old_point.y_sec / 3600 < 80)
+                if not is_lat and right_point:
+                    num = old_point.x_sec / 3600
+                    num = num - 360 if num >= 180 else num
+                    qp.drawText(old_point.x_visual_progect,
+                                old_point.y_visual_progect,
+                                old_point.x_visual_progect + 10,
+                                old_point.y_visual_progect,
+                                Qt.AlignLeft, str(num))
+
+    def backlight_for_star(self, star):
+        return self.star_for_inf is not None and \
+            star.constellation_name == self.star_for_inf.constellation_name
 
     def draw_backlight(self, qp):
         for star in self.progection.current_visual_progection:
-            if (self.star_for_inf is not None and
-                    star.constellation_name == self.star_for_inf.constellation_name):
+            if (self.backlight_for_star(star)):
                 qp.setBrush(QColor(0, 30, 30))
                 qp.setPen(QColor(0, 30, 30))
                 qp.drawEllipse(star.x_visual_progect - 10,
@@ -364,7 +460,9 @@ class Sky(QWidget):
 
 def main():
     app = QApplication(sys.argv)
-    sky = Sky()
+    print(sys.path)
+    namespace = my_parser.get_correct_namespace()
+    sky = Sky(namespace)
     sys.exit(app.exec_())
 
 
